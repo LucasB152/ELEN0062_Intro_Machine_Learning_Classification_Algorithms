@@ -43,7 +43,7 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         if X.ndim != 2:
             raise ValueError("X must be 2 dimensional")
 
-        y = np.asarray(y)
+        y = np.asarray(y) # classes
         if y.shape[0] != X.shape[0]:
             raise ValueError("The number of samples differs between X and y")
 
@@ -51,7 +51,17 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         # TODO your code here (KDE Naive Bayes).
         # ====================
 
-        raise NotImplementedError("Fit class priors and one 1D KDE per class and feature")
+        classes, nb_element_classes = np.unique(y, return_counts=True)
+        total_nb_element = len(y)
+
+        self.classes_ = classes
+        self.log_priors_ = nb_element_classes/total_nb_element
+        self.X_per_classes_ = []
+
+        for c in classes:
+            self.X_per_classes_.append(X[y == c])
+
+        return self
 
     def predict(self, X):
         """Predict class for X.
@@ -71,7 +81,8 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         # TODO your code here.
         # ====================
 
-        raise NotImplementedError("Implement predictions and normalized posterior probabilities")
+        log_prob = self.predict_log_proba(X)
+        return self.classes_[np.argmax(log_prob, axis=1)]
 
     def predict_proba(self, X):
         """Return probability estimates for the test data X.
@@ -92,8 +103,7 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         # TODO your code here.
         # ====================
 
-        raise NotImplementedError("Implement predictions and normalized posterior probabilities")
-    
+        return np.exp(self.predict_log_proba(X))
 
     def predict_log_proba(self, X):
         """
@@ -119,8 +129,87 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         # TODO your code here.
         # ====================
 
-        raise NotImplementedError("Implement predictions and normalized posterior probabilities")
+        # Numerator
 
+
+        # Building plan
+        # Loop on inputs
+        # Loop on classes
+            # compute normalization coef
+            # pull training points of the current class
+            # Loop on each feature
+                # build an array for the input of _gaussian_kernel
+                # sum all the components
+                # normalize the sum
+                # compute the log
+            # place the result in the corresponding column of the result matrix
+
+        X = np.asarray(X)
+        n_samples, n_features = X.shape
+        n_classes = len(self.classes_)
+
+        log_prob = np.zeros((n_samples, n_classes))
+
+        for x in range(n_samples):
+            for j in range(n_classes):
+                score = self.log_priors_[j]
+
+                X_c = self.X_per_classes_[j]
+                n_y = X_c.shape[0]
+                norm = 1 / (n_y * self.bandwidth)
+
+                for f in range(n_features):
+                    u = (X[x, f] - X_c[:, f]) / self.bandwidth # : mean all the elements
+                    k = self._gaussian_kernel(u)
+                    density_input = norm * np.sum(k) # np.sum(k) can be 0.0
+                    score += np.log(density_input + 1e-300) # add an epsilon to avoid log of 0
+
+                log_prob[x, j] = score
+
+        # Problem:
+        # if log_prob << 0 -> np.exp(log_prob) is rounded to 0.0 -> np.log(0.0) == -inf
+
+        # Exponent property:
+        # log_prob == m + (log_prob - m)
+        # => exp(log_prob) == exp(m + (log_prob - m))
+        # => exp(log_prob) == exp(m) * exp(log_prob - m)
+        # => log(exp(log_prob)) == log(exp(m) * exp(log_prob - m))
+        # => log_prob == m + log(exp(log_prob - m))
+        # -> the principle stays identical even with np.sum
+
+        # if m == max, all the terms (log_prob - m) are <= 0 and the biggest one is == 0,
+        # so at least one term is np.exp(0) == 1
+        # -> the sum is always >= 1
+        # -> prevents the case where the sum is very close to 0 and gives log(0)
+        m = np.max(log_prob, axis = 1, keepdims=True)
+        log_p_x = m + np.log(np.sum(np.exp(log_prob - m), axis=1, keepdims=True))
+        return log_prob - log_p_x
+
+    def _gaussian_kernel(self, u): # can return somethin smaller then the epsilon machin -> return zero
+        return (1 / np.sqrt(2 * np.pi)) * np.exp((-u**2)/2) # near the 0 if very negative
 
 if __name__ == "__main__":
-    pass  # Make your experiments here
+
+    bandwidths = [0.005, 0.03, 0.2, 0.8, 3.2]
+
+    for bandwidth in bandwidths:
+        test_acc = []
+        for seed in range(43, 48):
+            inputs, outputs = make_dataset(1500, random_state=seed)
+            inputs_train, outputs_train = inputs[:1200], outputs[:1200]
+            inputs_test, outputs_test = inputs[1200:], outputs[1200:]
+
+            naive_bayes_classifier = NaiveBayesClassifier(bandwidth=bandwidth)
+            naive_bayes_classifier.fit(inputs_train, outputs_train) 
+
+            test_acc.append(naive_bayes_classifier.score(inputs_test, outputs_test))
+
+            if seed == 43:
+                plot_boundary(f"naive_bayes_results/bandwidth_{bandwidth}", naive_bayes_classifier, inputs_test, outputs_test, title=f"bandwidth={bandwidth}")
+
+        mean_test = np.mean(test_acc)
+        std_test = np.std(test_acc) 
+
+        print("  h =", bandwidth)
+        print("  test accuracy :", mean_test)
+        print("  standard deviations:", std_test)
