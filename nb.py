@@ -40,7 +40,6 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         self : object
             Returns self.
         """
-        # Input validation
         X = np.asarray(X, dtype=float)
         if X.ndim != 2:
             raise ValueError("X must be 2 dimensional")
@@ -49,6 +48,7 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         if y.shape[0] != X.shape[0]:
             raise ValueError("The number of samples differs between X and y")
 
+        # This method returns the different values in an array
         classes, nb_element_classes = np.unique(y, return_counts=True)
         total_nb_element = len(y)
 
@@ -56,6 +56,7 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         self.priors_ = nb_element_classes/total_nb_element
         self.X_per_classes_ = []
 
+        # We create arrays containing elements with the same output
         for c in classes:
             self.X_per_classes_.append(X[y == c])
 
@@ -75,8 +76,8 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         y : array of shape = [n_samples]
             The predicted classes, or the predict values.
         """
-        scores = self.compute_scores(X)
-        return self.classes_[np.argmax(scores, axis=1)]
+        log_proba = self.predict_log_proba(X)
+        return self.classes_[np.argmax(log_proba, axis=1)]
 
 
     def predict_proba(self, X):
@@ -117,7 +118,28 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
             model, where classes are ordered as they are in ``self.classes_``.
         """
 
-        scores = self.compute_scores(X)
+        X = np.asarray(X, dtype=float)
+        h = self.bandwidth
+
+        # Array filled with 0 of N lines and c columns, with N = size of sample & c = number of classes
+        scores = np.zeros((X.shape[0], len(self.priors_)))
+
+        # Iterating over each class
+        # k is the index (given by the enumerate function)
+        for k, (prior, x_train) in enumerate(zip(self.priors_, self.X_per_classes_)):
+
+            # Sample size of the current class
+            n_k = x_train.shape[0]
+
+            u = (X[:, None, :] - x_train[None, :, :]) / h
+            log_gaussian_kernel = -0.5 * np.log(2 * np.pi) - 0.5 * u ** 2
+
+            m = np.max(log_gaussian_kernel, axis=1, keepdims=True)
+            log_sum = m.squeeze(axis=1) + np.log(np.sum(np.exp(log_gaussian_kernel - m), axis=1))
+
+            log_likelihood = log_sum - np.log(n_k * h)
+
+            scores[:, k] = np.log(prior) + np.sum(log_likelihood, axis=1)
         log_proba = np.zeros_like(scores)
 
         for a in range(scores.shape[0]):
@@ -126,36 +148,6 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
                 log_proba[a, k] = scores[a, k] - log_px
 
         return log_proba
-
-    def compute_scores(self, X):
-        X = np.asarray(X, dtype=float)
-        h = self.bandwidth
-
-        result = []
-
-        for input_x in X:
-            row = []
-            for prior, x_values in zip(self.priors_, self.X_per_classes_):
-
-                # Compute KDE
-                nb_element = len(x_values)
-                log_likelihood = 0.0
-
-                # We loop over each feature
-                for i in range(len(input_x)):
-                    log_kernels = []
-
-                    # We loop over each data in the dataset corresponding to that class
-                    for x_value in x_values:
-                        log_kernels.append(self.LogGaussianKernel((input_x[i] - x_value[i]) / h))
-
-                    log_likelihood += self.log_sum_exp(log_kernels) - math.log(nb_element * h)
-
-                row.append(math.log(prior) + log_likelihood)
-
-            result.append(row)
-
-        return np.array(result)
         
     def log_sum_exp(self, values):
         m = max(values)
@@ -163,10 +155,6 @@ class NaiveBayesClassifier(ClassifierMixin, BaseEstimator):
         for v in values:
             total += math.exp(v - m)
         return m + math.log(total)
-        
-    def LogGaussianKernel(self, u):
-        return -0.5 * math.log(2 * math.pi) -0.5 * u * u
-
 
 if __name__ == "__main__":
     bandwitdth_values = [0.005, 0.03, 0.2, 0.8, 3.2]
@@ -190,4 +178,4 @@ if __name__ == "__main__":
 
         file_name = f"naive_bayes_results/bandwidth_{bandwidth}"
         plot_boundary(file_name, naive_bayes_classifier, inputs_test, outputs_test, title=f"bandwidth={bandwidth}")
-        print(f"h = {bandwidth}, test = {np.mean(test_acc):.3f} +/- {np.std(test_acc):.3f}, train = {np.mean(train_acc):.3f} +/- {np.std(train_acc):.3f}")
+        print(f"h = {bandwidth}, train = {np.mean(train_acc):.3f} +/- {np.std(train_acc):.3f}, test = {np.mean(test_acc):.3f} +/- {np.std(test_acc):.3f}")
