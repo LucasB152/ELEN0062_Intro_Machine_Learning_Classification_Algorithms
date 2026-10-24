@@ -15,9 +15,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from data import make_dataset
 from plot import plot_boundary
 
-
-# Put your functions here
-# ...
 SEEDS = [1, 9, 45, 225, 901]
 PLOT_SEED = 42
 K_VALUES = [1, 9, 45, 225, 901]
@@ -32,7 +29,8 @@ def decision_boundary():
     for k in K_VALUES:
         model = KNeighborsClassifier(n_neighbors=k)
         model.fit(X_ls, y_ls)
-        plot_boundary(fname=f'knn_{k}', fitted_estimator=model, X=X_ts, y=y_ts, title=f'graph_knn_{k}')
+        file_name = f"knn_result/knn_{k}"
+        plot_boundary(file_name, fitted_estimator=model, X=X_ts, y=y_ts, title=f'graph_knn_{k}')
 
 def eval_accuracies():
     print("# Neighbors: \tMean accuracy, \tStandard Deviation")
@@ -47,8 +45,5 @@ def eval_accuracies():
 
 
 if __name__ == "__main__":
-    pass  # Make your experiments here
     decision_boundary()
     eval_accuracies()
-
-

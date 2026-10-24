@@ -10,8 +10,6 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from sklearn.tree import DecisionTreeClassifier
 
-import matplotlib
-matplotlib.use("Agg")
 from matplotlib import pyplot as plt
 
 from data import make_dataset
