@@ -40,5 +40,5 @@ if __name__ == "__main__":
         current_depth = decision_tree_classifier.get_depth()
         print(f"Depth={current_depth}: mean test accuracy={mean}, standard deviation test accuracy={standard_deviation}")
 
-        file_name = f"decision_tree_results/tree_depth_{depth}"
+        file_name = f"tree_depth_{depth}"
         plot_boundary(file_name, decision_tree_classifier, inputs_test, outputs_test, title=f"max_depth={depth}")

@@ -176,6 +176,6 @@ if __name__ == "__main__":
             test_acc.append(np.mean(test_pred == outputs_test))
 
 
-        file_name = f"naive_bayes_results/bandwidth_{bandwidth}"
+        file_name = f"bandwidth_{bandwidth}"
         plot_boundary(file_name, naive_bayes_classifier, inputs_test, outputs_test, title=f"bandwidth={bandwidth}")
         print(f"h = {bandwidth}, train = {np.mean(train_acc):.3f} +/- {np.std(train_acc):.3f}, test = {np.mean(test_acc):.3f} +/- {np.std(test_acc):.3f}")

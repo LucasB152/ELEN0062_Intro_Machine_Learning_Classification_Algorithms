@@ -37,7 +37,6 @@ DATASETS = {
     "two_moons": make_dataset,
     "xor": make_xor_dataset,
 }
-OUTPUT_DIR = "model_comparison"
 
 
 if __name__ == "__main__":
@@ -77,7 +76,7 @@ if __name__ == "__main__":
             # We train the model on the whole learning set
             model = make_model(best_values[name])
             model.fit(X_learning, y_learning)
-            plot_boundary(f"{OUTPUT_DIR}/mc_{data_name}_" + name.replace(" ", "_"),
+            plot_boundary(f"mc_{data_name}_" + name.replace(" ", "_"),
                           model, X_test, y_test, title=f"{name} (tuned: {best_values[name]})")
 
         # PART 2: accuracy evaluation over five generations with the choosen hyper-parameter

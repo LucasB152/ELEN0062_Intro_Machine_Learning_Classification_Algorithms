@@ -29,7 +29,7 @@ def decision_boundary():
     for k in K_VALUES:
         model = KNeighborsClassifier(n_neighbors=k)
         model.fit(X_ls, y_ls)
-        file_name = f"knn_result/knn_{k}"
+        file_name = f"knn_{k}"
         plot_boundary(file_name, fitted_estimator=model, X=X_ts, y=y_ts, title=f'graph_knn_{k}')
 
 def eval_accuracies():
